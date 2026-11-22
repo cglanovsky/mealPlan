@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#2563eb">
+  <title>MealPlanProgram</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="print.css" media="print">
+</head>
+<body>
+  <header class="app-header no-print">
+    <div class="header-left">
+      <h1>MealPlanProgram</h1>
+      <span id="sync-status" class="status-badge">Loading...</span>
+    </div>
+    <nav class="desktop-nav">
+      <button class="nav-btn active" data-view="plan">Meal Plan</button>
+      <button class="nav-btn" data-view="shopping">Shopping List</button>
+      <button class="nav-btn" data-view="library">Meal Library</button>
+    </nav>
+    <div class="header-right">
+      <button id="refresh-btn" class="btn-secondary" title="Sync with Google Sheet">Sync</button>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <section id="view-plan" class="view-section active no-print">
+      <div class="section-toolbar">
+        <h2>Weekly Meal Plan</h2>
+        <button id="clear-plan-btn" class="btn-danger-outline">Clear Week</button>
+      </div>
+      <div id="weekly-grid" class="weekly-grid"></div>
+    </section>
+
+    <section id="view-shopping" class="view-section">
+      <div class="section-toolbar no-print">
+        <h2>Shopping List</h2>
+        <div class="toolbar-actions">
+          <button id="reset-shopping-btn" class="btn-secondary">Reset Overrides</button>
+          <button id="print-btn" class="btn-primary">Print / Save 8.5x11 PDF</button>
+        </div>
+      </div>
+
+      <div id="shopping-quadrants" class="quadrants-grid">
+        <div class="quadrant" data-category="Produce">
+          <div class="quadrant-header">
+            <h3>Produce</h3>
+          </div>
+          <div class="custom-add-wrapper no-print">
+            <input type="text" class="custom-item-input" data-category="Produce" placeholder="Add produce item..." autocomplete="off">
+            <input type="number" class="custom-qty-input" value="1" min="0.1" step="0.1">
+            <select class="custom-unit-select"></select>
+            <button class="btn-add-custom" data-category="Produce">+</button>
+            <div class="autocomplete-dropdown"></div>
+          </div>
+          <ul class="shopping-items-list" id="list-Produce"></ul>
+        </div>
+
+        <div class="quadrant" data-category="Grocery">
+          <div class="quadrant-header">
+            <h3>Grocery</h3>
+          </div>
+          <div class="custom-add-wrapper no-print">
+            <input type="text" class="custom-item-input" data-category="Grocery" placeholder="Add grocery item..." autocomplete="off">
+            <input type="number" class="custom-qty-input" value="1" min="0.1" step="0.1">
+            <select class="custom-unit-select"></select>
+            <button class="btn-add-custom" data-category="Grocery">+</button>
+            <div class="autocomplete-dropdown"></div>
+          </div>
+          <ul class="shopping-items-list" id="list-Grocery"></ul>
+        </div>
+
+        <div class="quadrant" data-category="Frozen/Dairy">
+          <div class="quadrant-header">
+            <h3>Frozen/Dairy</h3>
+          </div>
+          <div class="custom-add-wrapper no-print">
+            <input type="text" class="custom-item-input" data-category="Frozen/Dairy" placeholder="Add frozen/dairy item..." autocomplete="off">
+            <input type="number" class="custom-qty-input" value="1" min="0.1" step="0.1">
+            <select class="custom-unit-select"></select>
+            <button class="btn-add-custom" data-category="Frozen/Dairy">+</button>
+            <div class="autocomplete-dropdown"></div>
+          </div>
+          <ul class="shopping-items-list" id="list-Frozen/Dairy"></ul>
+        </div>
+
+        <div class="quadrant" data-category="Supplies/Specialty">
+          <div class="quadrant-header">
+            <h3>Supplies/Specialty</h3>
+          </div>
+          <div class="custom-add-wrapper no-print">
+            <input type="text" class="custom-item-input" data-category="Supplies/Specialty" placeholder="Add supply/specialty item..." autocomplete="off">
+            <input type="number" class="custom-qty-input" value="1" min="0.1" step="0.1">
+            <select class="custom-unit-select"></select>
+            <button class="btn-add-custom" data-category="Supplies/Specialty">+</button>
+            <div class="autocomplete-dropdown"></div>
+          </div>
+          <ul class="shopping-items-list" id="list-Supplies/Specialty"></ul>
+          <div class="staples-pool-container no-print">
+            <p class="staples-label">Quick-Toggle Household Supplies</p>
+            <div id="supplies-staples-pool" class="staples-pool"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-library" class="view-section no-print">
+      <div class="section-toolbar">
+        <h2>Meal Library</h2>
+        <button id="new-meal-btn" class="btn-primary">+ New Meal</button>
+      </div>
+      <div class="search-bar">
+        <input type="text" id="library-search" placeholder="Search meals or ingredients...">
+      </div>
+      <div id="meal-library-grid" class="library-grid"></div>
+    </section>
+  </main>
+
+  <nav class="mobile-nav no-print">
+    <button class="nav-btn active" data-view="plan">Meal Plan</button>
+    <button class="nav-btn" data-view="shopping">Shopping</button>
+    <button class="nav-btn" data-view="library">Library</button>
+  </nav>
+
+  <div id="meal-editor-modal" class="modal hidden no-print">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="editor-modal-title">Add New Meal</h3>
+        <button class="close-modal" data-close="meal-editor-modal">&times;</button>
+      </div>
+      <form id="meal-form">
+        <input type="hidden" id="edit-meal-id">
+        <div class="form-group">
+          <label for="meal-title-input">Meal Title</label>
+          <input type="text" id="meal-title-input" required placeholder="e.g., Chicken Stir Fry">
+        </div>
+        <div class="form-group">
+          <label>Ingredients</label>
+          <div id="ingredient-rows-container"></div>
+          <button type="button" id="add-ingredient-row-btn" class="btn-secondary">+ Add Ingredient</button>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary close-modal" data-close="meal-editor-modal">Cancel</button>
+          <button type="submit" class="btn-primary">Save Meal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="slot-picker-modal" class="modal hidden no-print">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="slot-picker-title">Assign Meal</h3>
+        <button class="close-modal" data-close="slot-picker-modal">&times;</button>
+      </div>
+      <input type="text" id="slot-meal-search" placeholder="Filter meals..." class="modal-search">
+      <div id="slot-meal-options" class="slot-options-list"></div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
