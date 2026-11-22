@@ -1,0 +1,83 @@
+@media print {
+  @page {
+    size: 11in 8.5in;
+    margin: 0.3in;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .app-main {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  #view-shopping {
+    display: block !important;
+  }
+
+  .quadrants-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: 1fr 1fr !important;
+    gap: 0.15in !important;
+    width: 10.4in !important;
+    height: 7.9in !important;
+  }
+
+  .quadrant {
+    border: 1.5pt solid #000000 !important;
+    border-radius: 0 !important;
+    padding: 0.12in !important;
+    overflow: hidden !important;
+    page-break-inside: avoid !important;
+  }
+
+  .quadrant-header {
+    border-bottom: 1.5pt solid #000000 !important;
+    margin-bottom: 0.08in !important;
+    padding-bottom: 0.04in !important;
+  }
+
+  .quadrant-header h3 {
+    font-size: 12pt !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5pt !important;
+  }
+
+  .shopping-items-list {
+    display: block !important;
+    column-count: 2 !important;
+    column-gap: 0.15in !important;
+  }
+
+  .shopping-item {
+    break-inside: avoid !important;
+    border-bottom: none !important;
+    padding: 2pt 0 !important;
+    font-size: 9.5pt !important;
+  }
+
+  .item-controls {
+    display: none !important;
+  }
+
+  .item-checkbox {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    width: 9pt !important;
+    height: 9pt !important;
+    border: 1pt solid #000000 !important;
+    display: inline-block !important;
+    margin-right: 4pt !important;
+  }
+}
