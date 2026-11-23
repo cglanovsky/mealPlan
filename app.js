@@ -158,7 +158,7 @@ function setupEventListeners() {
       const nameInput = wrapper.querySelector(".custom-item-input");
       const qtyInput = wrapper.querySelector(".custom-qty-input");
       const unitSelect = wrapper.querySelector(".custom-unit-select");
-      addCustomShoppingItem(nameInput.value, parseFloat(qtyInput.value) || 1, unitSelect.value, cat);
+      addCustomShoppingItem(nameInput.value, Math.max(1, Math.round(parseFloat(qtyInput.value) || 1)), unitSelect.value, cat);
       nameInput.value = "";
       qtyInput.value = "1";
       wrapper.querySelector(".autocomplete-dropdown").classList.remove("show");
@@ -287,8 +287,8 @@ function renderShoppingList() {
           <span class="item-label"><strong>${qtyPrefix}</strong>${escapeHtml(item.name)}</span>
         </label>
         <div class="item-controls no-print">
-          <button class="qty-btn" data-delta="-0.5">-</button>
-          <button class="qty-btn" data-delta="0.5">+</button>
+          <button class="qty-btn" data-delta="-1">-</button>
+          <button class="qty-btn" data-delta="1">+</button>
           <button class="del-item-btn" title="Remove from list">&times;</button>
         </div>
       `;
@@ -301,8 +301,8 @@ function renderShoppingList() {
 
       li.querySelectorAll(".qty-btn").forEach(btn => {
         btn.addEventListener("click", () => {
-          const delta = parseFloat(btn.dataset.delta);
-          const nextQty = Math.max(0.5, item.quantity + delta);
+          const delta = parseInt(btn.dataset.delta, 10);
+          const nextQty = Math.max(1, item.quantity + delta);
           state.shoppingState.qtyOverrides[item.key] = nextQty;
           renderShoppingList();
           postToServer({ action: "saveShoppingState", state: state.shoppingState });
@@ -535,7 +535,7 @@ function addIngredientRow(ing = null) {
 
   row.innerHTML = `
     <input type="text" class="ing-name" placeholder="Ingredient" required value="${ing ? escapeHtml(ing.Item_Name) : ""}">
-    <input type="number" class="ing-qty" placeholder="Qty" step="0.01" min="0.01" required value="${ing ? ing.Quantity : 1}">
+    <input type="number" class="ing-qty" placeholder="Qty" step="1" min="1" required value="${ing ? Math.max(1, Math.round(ing.Quantity)) : 1}">
     <select class="ing-unit">
       ${unitOptions}
       <option value="__custom__">+ Custom Unit</option>
@@ -579,7 +579,7 @@ async function handleSaveMeal(e) {
   const ingredients = Array.from(rows).map(row => ({
     id: crypto.randomUUID(),
     name: row.querySelector(".ing-name").value.trim(),
-    quantity: parseFloat(row.querySelector(".ing-qty").value) || 1,
+    quantity: Math.max(1, Math.round(parseFloat(row.querySelector(".ing-qty").value) || 1)),
     unit: row.querySelector(".ing-unit").value,
     category: row.querySelector(".ing-cat").value
   }));
@@ -626,7 +626,7 @@ async function handleDeleteMeal(meal) {
 }
 
 function formatNumber(num) {
-  return Number(Math.round(num * 100) / 100);
+  return Math.round(num);
 }
 
 function escapeHtml(str) {
