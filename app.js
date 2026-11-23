@@ -10,7 +10,8 @@ let state = {
     deleted: {},
     activeSupplies: [],
     customItems: []
-  }
+  },
+  randomSlots: {}
 };
 
 let activeSlotTarget = { day: null, slot: null };
@@ -36,7 +37,7 @@ function loadCachedState() {
     try {
       const parsed = JSON.parse(cached);
       state = { ...state, ...parsed };
-      normalizeShoppingState();
+      normalizeState();
     } catch (e) {}
   }
 }
@@ -45,7 +46,12 @@ function saveLocalCache() {
   localStorage.setItem("mealPlanAppCache", JSON.stringify(state));
 }
 
-function normalizeShoppingState() {
+function normalizeState() {
+  state.meals = (state.meals || []).map(m => ({
+    ...m,
+    Effort: m.Effort || "Normal"
+  }));
+
   if (!state.shoppingState || typeof state.shoppingState !== "object") {
     state.shoppingState = {};
   }
@@ -54,6 +60,10 @@ function normalizeShoppingState() {
   state.shoppingState.deleted = state.shoppingState.deleted || {};
   state.shoppingState.activeSupplies = Array.isArray(state.shoppingState.activeSupplies) ? state.shoppingState.activeSupplies : [];
   state.shoppingState.customItems = Array.isArray(state.shoppingState.customItems) ? state.shoppingState.customItems : [];
+
+  if (!state.randomSlots || typeof state.randomSlots !== "object") {
+    state.randomSlots = {};
+  }
 }
 
 function setStatus(text, isOnline = false) {
@@ -76,7 +86,7 @@ async function syncFromServer() {
         state.units = json.data.units;
       }
       state.shoppingState = json.data.shoppingState || {};
-      normalizeShoppingState();
+      normalizeState();
       saveLocalCache();
       renderAll();
       setStatus("Synced", true);
@@ -117,6 +127,7 @@ function setupEventListeners() {
   document.getElementById("clear-plan-btn").addEventListener("click", () => {
     if (!confirm("Clear all meals from this week's plan?")) return;
     state.weeklyPlan.forEach(p => (p.Meal_ID = ""));
+    state.randomSlots = {};
     renderWeeklyPlan();
     renderShoppingList();
     postToServer({ action: "clearWeeklyPlan" });
@@ -238,13 +249,30 @@ function renderWeeklyPlan() {
     CONFIG.SLOTS.forEach(slot => {
       const entry = state.weeklyPlan.find(p => p.Day_Of_Week === day && p.Meal_Slot === slot);
       const meal = entry && entry.Meal_ID ? state.meals.find(m => m.Meal_ID === entry.Meal_ID) : null;
+      const slotKey = `${day}|${slot}`;
+      const randomEffort = meal ? state.randomSlots[slotKey] : null;
+
+      if (!meal && state.randomSlots[slotKey]) {
+        delete state.randomSlots[slotKey];
+      }
 
       const slotDiv = document.createElement("div");
       slotDiv.className = `meal-slot ${meal ? "filled" : ""}`;
       slotDiv.innerHTML = `
         <span class="slot-label">${slot}</span>
-        <span class="slot-meal-name">${meal ? escapeHtml(meal.Title) : "+ Assign"}</span>
+        <div class="slot-meal-row">
+          <span class="slot-meal-name">${meal ? escapeHtml(meal.Title) : "+ Assign"}</span>
+          ${randomEffort ? `<button type="button" class="slot-refresh-btn" title="Pick another random ${escapeHtml(randomEffort)} meal">&#x21bb;</button>` : ""}
+        </div>
       `;
+
+      if (randomEffort) {
+        slotDiv.querySelector(".slot-refresh-btn").addEventListener("click", e => {
+          e.stopPropagation();
+          assignRandomMeal(day, slot, randomEffort, meal.Meal_ID);
+        });
+      }
+
       slotDiv.addEventListener("click", () => openSlotPicker(day, slot));
       card.appendChild(slotDiv);
     });
@@ -270,22 +298,68 @@ function renderSlotPickerOptions() {
   clearBtn.className = "slot-option-btn";
   clearBtn.style.color = "var(--danger)";
   clearBtn.textContent = "— Clear Slot —";
-  clearBtn.addEventListener("click", () => assignMealToSlot(""));
+  clearBtn.addEventListener("click", () => assignMealToSlot("", null));
   list.appendChild(clearBtn);
+
+  CONFIG.EFFORT_LEVELS.forEach(effort => {
+    const label = `Random ${effort} Meal`;
+    if (query && !label.toLowerCase().includes(query)) return;
+
+    const btn = document.createElement("button");
+    btn.className = "slot-option-btn slot-option-random";
+    btn.innerHTML = `<span>${label}</span><span class="slot-option-tag">Random</span>`;
+    btn.addEventListener("click", () => {
+      const { day, slot } = activeSlotTarget;
+      assignRandomMeal(day, slot, effort);
+    });
+    list.appendChild(btn);
+  });
 
   state.meals
     .filter(m => m.Title.toLowerCase().includes(query))
     .forEach(meal => {
+      const effort = meal.Effort || "Normal";
       const btn = document.createElement("button");
       btn.className = "slot-option-btn";
-      btn.textContent = meal.Title;
-      btn.addEventListener("click", () => assignMealToSlot(meal.Meal_ID));
+      btn.innerHTML = `<span>${escapeHtml(meal.Title)}</span><span class="slot-option-tag">${escapeHtml(effort)}</span>`;
+      btn.addEventListener("click", () => assignMealToSlot(meal.Meal_ID, null));
       list.appendChild(btn);
     });
 }
 
-function assignMealToSlot(mealId) {
+function assignRandomMeal(day, slot, effort, excludeMealId = null) {
+  const matching = state.meals.filter(m => (m.Effort || "Normal") === effort);
+
+  if (matching.length === 0) {
+    alert(`No "${effort}" meals found. Assign a meal to "${effort}" on the Meals screen first.`);
+    return;
+  }
+
+  let candidates = matching;
+  if (excludeMealId) {
+    const others = matching.filter(m => m.Meal_ID !== excludeMealId);
+    if (others.length === 0) {
+      alert(`No other "${effort}" meals available to reselect.`);
+      return;
+    }
+    candidates = others;
+  }
+
+  const picked = candidates[Math.floor(Math.random() * candidates.length)];
+  activeSlotTarget = { day, slot };
+  assignMealToSlot(picked.Meal_ID, effort);
+}
+
+function assignMealToSlot(mealId, randomEffort = null) {
   const { day, slot } = activeSlotTarget;
+  const slotKey = `${day}|${slot}`;
+
+  if (mealId && randomEffort) {
+    state.randomSlots[slotKey] = randomEffort;
+  } else {
+    delete state.randomSlots[slotKey];
+  }
+
   let entry = state.weeklyPlan.find(p => p.Day_Of_Week === day && p.Meal_Slot === slot);
   if (entry) {
     entry.Meal_ID = mealId;
@@ -556,11 +630,17 @@ function renderMealLibrary() {
     .filter(meal => {
       const mealIngs = state.ingredients.filter(i => i.Meal_ID === meal.Meal_ID);
       const ingText = mealIngs.map(i => i.Item_Name.toLowerCase()).join(" ");
-      return meal.Title.toLowerCase().includes(query) || ingText.includes(query);
+      const effort = (meal.Effort || "Normal").toLowerCase();
+      return meal.Title.toLowerCase().includes(query) || ingText.includes(query) || effort.includes(query);
     })
     .forEach(meal => {
       const mealIngs = state.ingredients.filter(i => i.Meal_ID === meal.Meal_ID);
       const preview = mealIngs.map(i => `${formatNumber(i.Quantity)} ${i.Unit} ${i.Item_Name}`).join(", ");
+      const currentEffort = meal.Effort || "Normal";
+
+      const effortPills = CONFIG.EFFORT_LEVELS.map(level => `
+        <button type="button" class="effort-pill ${currentEffort === level ? "active" : ""}" data-effort="${level}">${level}</button>
+      `).join("");
 
       const card = document.createElement("div");
       card.className = "meal-card";
@@ -568,12 +648,23 @@ function renderMealLibrary() {
         <div>
           <h3>${escapeHtml(meal.Title)}</h3>
           <p class="meal-card-ingredients">${escapeHtml(preview) || "No ingredients listed"}</p>
+          <div class="effort-selector">${effortPills}</div>
         </div>
         <div class="meal-card-actions">
           <button class="btn-secondary edit-meal-btn">Edit</button>
           <button class="btn-danger-outline delete-meal-btn">Delete</button>
         </div>
       `;
+
+      card.querySelectorAll(".effort-pill").forEach(pill => {
+        pill.addEventListener("click", () => {
+          const nextEffort = pill.dataset.effort;
+          if (nextEffort === currentEffort) return;
+          meal.Effort = nextEffort;
+          renderMealLibrary();
+          postToServer({ action: "updateMealEffort", mealId: meal.Meal_ID, effort: nextEffort });
+        });
+      });
 
       card.querySelector(".edit-meal-btn").addEventListener("click", () => openMealEditor(meal));
       card.querySelector(".delete-meal-btn").addEventListener("click", () => handleDeleteMeal(meal));
@@ -585,6 +676,7 @@ function openMealEditor(meal = null) {
   document.getElementById("editor-modal-title").textContent = meal ? "Edit Meal" : "Add New Meal";
   document.getElementById("edit-meal-id").value = meal ? meal.Meal_ID : "";
   document.getElementById("meal-title-input").value = meal ? meal.Title : "";
+  document.getElementById("meal-effort-select").value = meal && meal.Effort ? meal.Effort : "Normal";
 
   const container = document.getElementById("ingredient-rows-container");
   container.innerHTML = "";
@@ -676,6 +768,7 @@ async function handleSaveMeal(e) {
   e.preventDefault();
   const mealId = document.getElementById("edit-meal-id").value || crypto.randomUUID();
   const title = document.getElementById("meal-title-input").value.trim();
+  const effort = document.getElementById("meal-effort-select").value || "Normal";
   const rows = document.querySelectorAll("#ingredient-rows-container .ingredient-row");
 
   const ingredients = Array.from(rows).map(row => {
@@ -692,8 +785,9 @@ async function handleSaveMeal(e) {
   const existingIndex = state.meals.findIndex(m => m.Meal_ID === mealId);
   if (existingIndex >= 0) {
     state.meals[existingIndex].Title = title;
+    state.meals[existingIndex].Effort = effort;
   } else {
-    state.meals.push({ Meal_ID: mealId, Title: title });
+    state.meals.push({ Meal_ID: mealId, Title: title, Effort: effort });
   }
 
   state.ingredients = state.ingredients.filter(i => i.Meal_ID !== mealId);
@@ -713,7 +807,7 @@ async function handleSaveMeal(e) {
 
   await postToServer({
     action: "saveMeal",
-    meal: { id: mealId, title, ingredients }
+    meal: { id: mealId, title, effort, ingredients }
   });
 }
 
