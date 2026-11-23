@@ -2,6 +2,7 @@ const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbyPNPL0tzlGxiUC6wZzN_bMUVbE0GUiWeFp29Lum0qK2gklTjp3nKRaxwMXpUnOnXYwjA/exec",
   DAYS: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
   SLOTS: ["Breakfast", "Lunch", "Dinner"],
+  EFFORT_LEVELS: ["Quick", "Normal", "Complex"],
   CATEGORIES: ["Produce", "Grocery", "Frozen/Dairy", "Supplies/Specialty"],
   HOUSEHOLD_STAPLES: [
     "Paper Towels",
