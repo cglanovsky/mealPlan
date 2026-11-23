@@ -1,6 +1,6 @@
 @media print {
   @page {
-    size: 11in 8.5in;
+    size: 8.5in 11in;
     margin: 0.3in;
   }
 
@@ -30,8 +30,8 @@
     grid-template-columns: 1fr 1fr !important;
     grid-template-rows: 1fr 1fr !important;
     gap: 0.15in !important;
-    width: 10.4in !important;
-    height: 7.9in !important;
+    width: 7.9in !important;
+    height: 10.4in !important;
   }
 
   .quadrant {
@@ -49,7 +49,7 @@
   }
 
   .quadrant-header h3 {
-    font-size: 12pt !important;
+    font-size: 11.5pt !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5pt !important;
   }
@@ -57,14 +57,14 @@
   .shopping-items-list {
     display: block !important;
     column-count: 2 !important;
-    column-gap: 0.15in !important;
+    column-gap: 0.12in !important;
   }
 
   .shopping-item {
     break-inside: avoid !important;
     border-bottom: none !important;
     padding: 2pt 0 !important;
-    font-size: 9.5pt !important;
+    font-size: 9pt !important;
   }
 
   .item-controls {
@@ -74,8 +74,8 @@
   .item-checkbox {
     appearance: none !important;
     -webkit-appearance: none !important;
-    width: 9pt !important;
-    height: 9pt !important;
+    width: 8.5pt !important;
+    height: 8.5pt !important;
     border: 1pt solid #000000 !important;
     display: inline-block !important;
     margin-right: 4pt !important;
