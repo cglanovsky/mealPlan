@@ -168,15 +168,47 @@ function setupEventListeners() {
   });
 
   document.querySelectorAll(".custom-item-input").forEach(input => {
-    input.addEventListener("input", () => handleAutocomplete(input));
-    input.addEventListener("focus", () => handleAutocomplete(input));
+    input.addEventListener("input", () => handleShoppingAutocomplete(input));
+    input.addEventListener("focus", () => handleShoppingAutocomplete(input));
   });
 
   document.addEventListener("click", e => {
-    if (!e.target.closest(".custom-add-wrapper")) {
+    if (!e.target.closest(".custom-add-wrapper") && !e.target.closest(".ing-name-wrapper")) {
       document.querySelectorAll(".autocomplete-dropdown").forEach(d => d.classList.remove("show"));
     }
   });
+}
+
+function getIngredientBank() {
+  const bankMap = new Map();
+
+  state.ingredients.forEach(ing => {
+    if (!ing.Item_Name) return;
+    const name = ing.Item_Name.trim();
+    const key = name.toLowerCase();
+    if (!bankMap.has(key)) {
+      bankMap.set(key, {
+        name,
+        unit: ing.Unit || "count",
+        category: ing.Category || "Grocery"
+      });
+    }
+  });
+
+  state.customHistory.forEach(hist => {
+    if (!hist.Item_Name) return;
+    const name = hist.Item_Name.trim();
+    const key = name.toLowerCase();
+    if (!bankMap.has(key)) {
+      bankMap.set(key, {
+        name,
+        unit: "count",
+        category: hist.Category || "Grocery"
+      });
+    }
+  });
+
+  return Array.from(bankMap.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function renderAll() {
@@ -421,28 +453,48 @@ function renderSuppliesStaplesPool() {
   });
 }
 
-function handleAutocomplete(input) {
+function handleShoppingAutocomplete(input) {
   const cat = input.dataset.category;
   const query = input.value.trim().toLowerCase();
-  const dropdown = input.closest(".custom-add-wrapper").querySelector(".autocomplete-dropdown");
+  const wrapper = input.closest(".custom-add-wrapper");
+  const dropdown = wrapper.querySelector(".autocomplete-dropdown");
 
-  const matches = state.customHistory.filter(
-    h => h.Category === cat && h.Item_Name.toLowerCase().includes(query)
-  );
+  if (!query) {
+    dropdown.classList.remove("show");
+    return;
+  }
 
-  if (matches.length === 0 || !query) {
+  const bank = getIngredientBank();
+  const matches = bank
+    .filter(item => item.name.toLowerCase().includes(query))
+    .sort((a, b) => {
+      const aMatch = a.category === cat ? 0 : 1;
+      const bMatch = b.category === cat ? 0 : 1;
+      return aMatch - bMatch || a.name.localeCompare(b.name);
+    });
+
+  if (matches.length === 0) {
     dropdown.classList.remove("show");
     return;
   }
 
   dropdown.innerHTML = matches
-    .slice(0, 8)
-    .map(m => `<div class="autocomplete-item">${escapeHtml(m.Item_Name)}</div>`)
+    .slice(0, 10)
+    .map(m => `
+      <div class="autocomplete-item" data-name="${escapeHtml(m.name)}" data-unit="${escapeHtml(m.unit)}">
+        <span>${escapeHtml(m.name)}</span>
+        <span class="autocomplete-meta">${escapeHtml(m.unit)}</span>
+      </div>
+    `)
     .join("");
 
   dropdown.querySelectorAll(".autocomplete-item").forEach(div => {
     div.addEventListener("click", () => {
-      input.value = div.textContent;
+      input.value = div.dataset.name;
+      const unitSelect = wrapper.querySelector(".custom-unit-select");
+      if (div.dataset.unit && state.units.includes(div.dataset.unit)) {
+        unitSelect.value = div.dataset.unit;
+      }
       dropdown.classList.remove("show");
     });
   });
@@ -450,26 +502,49 @@ function handleAutocomplete(input) {
   dropdown.classList.add("show");
 }
 
-function addCustomShoppingItem(name, quantity, unit, category) {
-  const cleanName = name.trim();
-  if (!cleanName) return;
+function handleMealIngredientAutocomplete(input, row) {
+  const query = input.value.trim().toLowerCase();
+  const dropdown = row.querySelector(".autocomplete-dropdown");
 
-  const key = `custom|${category}|${cleanName.toLowerCase()}|${unit.toLowerCase()}`;
-  const existing = state.shoppingState.customItems.find(c => c.key === key);
-
-  if (existing) {
-    existing.quantity = formatNumber(existing.quantity + quantity);
-  } else {
-    state.shoppingState.customItems.push({ key, name: cleanName, quantity, unit, category });
+  if (!query) {
+    dropdown.classList.remove("show");
+    return;
   }
 
-  if (!state.customHistory.some(h => h.Item_Name.toLowerCase() === cleanName.toLowerCase() && h.Category === category)) {
-    state.customHistory.push({ Item_Name: cleanName, Category: category, Last_Used: new Date().toISOString() });
+  const bank = getIngredientBank();
+  const matches = bank.filter(item => item.name.toLowerCase().includes(query));
+
+  if (matches.length === 0) {
+    dropdown.classList.remove("show");
+    return;
   }
 
-  renderShoppingList();
-  postToServer({ action: "saveShoppingState", state: state.shoppingState });
-  postToServer({ action: "addCustomHistory", itemName: cleanName, category });
+  dropdown.innerHTML = matches
+    .slice(0, 10)
+    .map(m => `
+      <div class="autocomplete-item" data-name="${escapeHtml(m.name)}" data-unit="${escapeHtml(m.unit)}" data-cat="${escapeHtml(m.category)}">
+        <span>${escapeHtml(m.name)}</span>
+        <span class="autocomplete-meta">${escapeHtml(m.unit)} · ${escapeHtml(m.category)}</span>
+      </div>
+    `)
+    .join("");
+
+  dropdown.querySelectorAll(".autocomplete-item").forEach(div => {
+    div.addEventListener("click", () => {
+      input.value = div.dataset.name;
+      const unitSelect = row.querySelector(".ing-unit");
+      const catSelect = row.querySelector(".ing-cat");
+      if (div.dataset.unit && state.units.includes(div.dataset.unit)) {
+        unitSelect.value = div.dataset.unit;
+      }
+      if (div.dataset.cat && CONFIG.CATEGORIES.includes(div.dataset.cat)) {
+        catSelect.value = div.dataset.cat;
+      }
+      dropdown.classList.remove("show");
+    });
+  });
+
+  dropdown.classList.add("show");
 }
 
 function renderMealLibrary() {
@@ -538,8 +613,15 @@ function addIngredientRow(ing = null) {
     .join("");
 
   row.innerHTML = `
-    <input type="text" class="ing-name" placeholder="Ingredient" required value="${ing ? escapeHtml(ing.Item_Name) : ""}">
-    <input type="number" class="ing-qty" placeholder="Qty" step="any" min="0.01" required value="${ing ? ing.Quantity : 1}">
+    <div class="ing-name-wrapper">
+      <input type="text" class="ing-name" placeholder="Ingredient" autocomplete="off" required value="${ing ? escapeHtml(ing.Item_Name) : ""}">
+      <div class="autocomplete-dropdown"></div>
+    </div>
+    <div class="qty-stepper">
+      <button type="button" class="step-down">-</button>
+      <input type="number" class="ing-qty" placeholder="Qty" step="any" min="0.01" required value="${ing ? ing.Quantity : 1}">
+      <button type="button" class="step-up">+</button>
+    </div>
     <select class="ing-unit">
       ${unitOptions}
       <option value="__custom__">+ Custom Unit</option>
@@ -547,6 +629,22 @@ function addIngredientRow(ing = null) {
     <select class="ing-cat">${catOptions}</select>
     <button type="button" class="del-item-btn">&times;</button>
   `;
+
+  const nameInput = row.querySelector(".ing-name");
+  nameInput.addEventListener("input", () => handleMealIngredientAutocomplete(nameInput, row));
+  nameInput.addEventListener("focus", () => handleMealIngredientAutocomplete(nameInput, row));
+
+  const qtyInput = row.querySelector(".ing-qty");
+  row.querySelector(".step-down").addEventListener("click", () => {
+    const current = parseFloat(qtyInput.value) || 1;
+    if (current > 1) {
+      qtyInput.value = formatNumber(current - 1);
+    }
+  });
+  row.querySelector(".step-up").addEventListener("click", () => {
+    const current = parseFloat(qtyInput.value) || 0;
+    qtyInput.value = formatNumber(current + 1);
+  });
 
   const unitSelect = row.querySelector(".ing-unit");
   unitSelect.addEventListener("change", () => {
@@ -630,6 +728,28 @@ async function handleDeleteMeal(meal) {
 
   renderAll();
   await postToServer({ action: "deleteMeal", mealId: meal.Meal_ID });
+}
+
+function addCustomShoppingItem(name, quantity, unit, category) {
+  const cleanName = name.trim();
+  if (!cleanName) return;
+
+  const key = `custom|${category}|${cleanName.toLowerCase()}|${unit.toLowerCase()}`;
+  const existing = state.shoppingState.customItems.find(c => c.key === key);
+
+  if (existing) {
+    existing.quantity = formatNumber(existing.quantity + quantity);
+  } else {
+    state.shoppingState.customItems.push({ key, name: cleanName, quantity, unit, category });
+  }
+
+  if (!state.customHistory.some(h => h.Item_Name.toLowerCase() === cleanName.toLowerCase() && h.Category === category)) {
+    state.customHistory.push({ Item_Name: cleanName, Category: category, Last_Used: new Date().toISOString() });
+  }
+
+  renderShoppingList();
+  postToServer({ action: "saveShoppingState", state: state.shoppingState });
+  postToServer({ action: "addCustomHistory", itemName: cleanName, category });
 }
 
 function formatNumber(num) {
