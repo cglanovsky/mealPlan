@@ -16,19 +16,20 @@
       <span id="sync-status" class="status-badge">Loading...</span>
     </div>
     <nav class="desktop-nav">
-      <button class="nav-btn active" data-view="plan">Meal Plan</button>
-      <button class="nav-btn" data-view="shopping">Shopping List</button>
-      <button class="nav-btn" data-view="library">Meal Library</button>
+      <button class="nav-btn active" data-view="plan">Plan</button>
+      <button class="nav-btn" data-view="shopping">Shop</button>
+      <button class="nav-btn" data-view="library">Meals</button>
     </nav>
     <div class="header-right">
       <button id="refresh-btn" class="btn-secondary" title="Sync with Google Sheet">Sync</button>
+      <button id="new-meal-btn" class="btn-primary">+ Meal</button>
     </div>
   </header>
 
   <main class="app-main">
     <section id="view-plan" class="view-section active no-print">
       <div class="section-toolbar">
-        <h2>Weekly Meal Plan</h2>
+        <h2>Plan</h2>
         <button id="clear-plan-btn" class="btn-danger-outline">Clear Week</button>
       </div>
       <div id="weekly-grid" class="weekly-grid"></div>
@@ -36,7 +37,7 @@
 
     <section id="view-shopping" class="view-section">
       <div class="section-toolbar no-print">
-        <h2>Shopping List</h2>
+        <h2>Shop</h2>
         <div class="toolbar-actions">
           <button id="reset-shopping-btn" class="btn-secondary">Reset Overrides</button>
           <button id="print-btn" class="btn-primary">Print / Save 8.5x11 PDF</button>
@@ -50,7 +51,7 @@
           </div>
           <div class="custom-add-wrapper no-print">
             <input type="text" class="custom-item-input" data-category="Produce" placeholder="Add produce item..." autocomplete="off">
-            <input type="number" class="custom-qty-input" value="1" min="0.1" step="0.1">
+            <input type="number" class="custom-qty-input" value="1" min="1" step="1">
             <select class="custom-unit-select"></select>
             <button class="btn-add-custom" data-category="Produce">+</button>
             <div class="autocomplete-dropdown"></div>
@@ -64,7 +65,7 @@
           </div>
           <div class="custom-add-wrapper no-print">
             <input type="text" class="custom-item-input" data-category="Grocery" placeholder="Add grocery item..." autocomplete="off">
-            <input type="number" class="custom-qty-input" value="1" min="0.1" step="0.1">
+            <input type="number" class="custom-qty-input" value="1" min="1" step="1">
             <select class="custom-unit-select"></select>
             <button class="btn-add-custom" data-category="Grocery">+</button>
             <div class="autocomplete-dropdown"></div>
@@ -78,7 +79,7 @@
           </div>
           <div class="custom-add-wrapper no-print">
             <input type="text" class="custom-item-input" data-category="Frozen/Dairy" placeholder="Add frozen/dairy item..." autocomplete="off">
-            <input type="number" class="custom-qty-input" value="1" min="0.1" step="0.1">
+            <input type="number" class="custom-qty-input" value="1" min="1" step="1">
             <select class="custom-unit-select"></select>
             <button class="btn-add-custom" data-category="Frozen/Dairy">+</button>
             <div class="autocomplete-dropdown"></div>
@@ -92,14 +93,13 @@
           </div>
           <div class="custom-add-wrapper no-print">
             <input type="text" class="custom-item-input" data-category="Supplies/Specialty" placeholder="Add supply/specialty item..." autocomplete="off">
-            <input type="number" class="custom-qty-input" value="1" min="0.1" step="0.1">
+            <input type="number" class="custom-qty-input" value="1" min="1" step="1">
             <select class="custom-unit-select"></select>
             <button class="btn-add-custom" data-category="Supplies/Specialty">+</button>
             <div class="autocomplete-dropdown"></div>
           </div>
           <ul class="shopping-items-list" id="list-Supplies/Specialty"></ul>
           <div class="staples-pool-container no-print">
-            <p class="staples-label">Quick-Toggle Household Supplies</p>
             <div id="supplies-staples-pool" class="staples-pool"></div>
           </div>
         </div>
@@ -108,8 +108,7 @@
 
     <section id="view-library" class="view-section no-print">
       <div class="section-toolbar">
-        <h2>Meal Library</h2>
-        <button id="new-meal-btn" class="btn-primary">+ New Meal</button>
+        <h2>Meals</h2>
       </div>
       <div class="search-bar">
         <input type="text" id="library-search" placeholder="Search meals or ingredients...">
@@ -119,9 +118,9 @@
   </main>
 
   <nav class="mobile-nav no-print">
-    <button class="nav-btn active" data-view="plan">Meal Plan</button>
-    <button class="nav-btn" data-view="shopping">Shopping</button>
-    <button class="nav-btn" data-view="library">Library</button>
+    <button class="nav-btn active" data-view="plan">Plan</button>
+    <button class="nav-btn" data-view="shopping">Shop</button>
+    <button class="nav-btn" data-view="library">Meals</button>
   </nav>
 
   <div id="meal-editor-modal" class="modal hidden no-print">
