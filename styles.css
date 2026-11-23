@@ -216,10 +216,35 @@ button {
   color: var(--text-muted);
 }
 
+.slot-meal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+
 .slot-meal-name {
   font-size: 0.85rem;
   font-weight: 600;
-  margin-top: 0.25rem;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.slot-refresh-btn {
+  flex-shrink: 0;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.9rem;
+  line-height: 1;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid #93c5fd;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.slot-refresh-btn:hover {
+  background: #dbeafe;
 }
 
 .quadrants-grid {
@@ -427,6 +452,45 @@ button {
   font-size: 0.85rem;
   color: var(--text-muted);
   line-height: 1.4;
+  margin-top: 0.35rem;
+}
+
+.effort-selector {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 0.65rem;
+}
+
+.effort-pill {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: none;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+  background: #f8fafc;
+  color: var(--text-muted);
+}
+
+.effort-pill:last-child {
+  border-right: none;
+}
+
+.effort-pill.active[data-effort="Quick"] {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.effort-pill.active[data-effort="Normal"] {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.effort-pill.active[data-effort="Complex"] {
+  background: #fef3c7;
+  color: #b45309;
 }
 
 .meal-card-actions {
@@ -473,6 +537,19 @@ button {
   padding: 0 0.4rem;
 }
 
+.form-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.flex-2 {
+  flex: 2;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
 .form-group {
   margin-bottom: 1rem;
 }
@@ -484,11 +561,13 @@ button {
   font-size: 0.9rem;
 }
 
-.form-group input[type="text"] {
+.form-group input[type="text"],
+.form-group select {
   width: 100%;
   padding: 0.55rem;
   border: 1px solid var(--border);
   border-radius: 6px;
+  background: var(--surface);
 }
 
 .ingredient-row {
@@ -566,7 +645,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  max-height: 300px;
+  max-height: 320px;
   overflow-y: auto;
 }
 
@@ -575,10 +654,26 @@ button {
   padding: 0.6rem;
   border: 1px solid var(--border);
   background: #f8fafc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .slot-option-btn:hover {
   background: #eff6ff;
+}
+
+.slot-option-random {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.slot-option-tag {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
 @media (max-width: 900px) {
@@ -602,6 +697,10 @@ button {
   }
   .mobile-nav {
     display: flex;
+  }
+  .form-row {
+    flex-direction: column;
+    gap: 0;
   }
   .ingredient-row {
     grid-template-columns: 1fr 1fr;
