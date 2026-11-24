@@ -1,4 +1,4 @@
-const CACHE_NAME = "mealplan-pwa-v2";
+const CACHE_NAME = "mealplan-pwa-v3";
 const ASSETS = [
   "./",
   "./index.html",
@@ -8,7 +8,7 @@ const ASSETS = [
   "./app.js",
   "./manifest.json",
   "./icon-192.png",
-  "./icon-512.png",
+  "./icon-512-v2.png",
   "./favicon.png"
 ];
 
