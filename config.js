@@ -19,6 +19,10 @@ const CONFIG = {
     "Garbage Bags",
     "Paper Plates",
     "Napkins",
-    "Plastic Cutlery"
+    "Plastic Cutlery",
+    "Coffee Beans",
+    "Shampoo",
+    "Cups",
+    "Plastic Wrap"
   ]
 };
