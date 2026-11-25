@@ -44,6 +44,7 @@
       <div class="section-toolbar no-print">
         <h2>Shop</h2>
         <div class="toolbar-actions">
+          <button id="add-other-items-btn" class="btn-primary">Add Other Items</button>
           <button id="reset-shopping-btn" class="btn-secondary">Reset Overrides</button>
           <button id="print-btn" class="btn-primary">Print / Save 8.5x11 PDF</button>
         </div>
@@ -171,6 +172,45 @@
       </div>
       <input type="text" id="slot-meal-search" placeholder="Filter meals..." class="modal-search">
       <div id="slot-meal-options" class="slot-options-list"></div>
+    </div>
+  </div>
+
+  <div id="other-items-modal" class="modal hidden no-print">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add Other Items</h3>
+        <button class="close-modal" data-close="other-items-modal">&times;</button>
+      </div>
+
+      <div class="other-item-entry-bar">
+        <div class="other-name-wrapper">
+          <input type="text" id="other-item-name" placeholder="Type item name..." autocomplete="off">
+          <div id="other-item-dropdown" class="autocomplete-dropdown"></div>
+        </div>
+        <input type="number" id="other-item-qty" value="1" min="0.01" step="any">
+        <select id="other-item-unit" class="custom-unit-select"></select>
+        <button type="button" id="queue-other-item-btn" class="btn-primary">Add</button>
+      </div>
+
+      <div id="new-item-category-prompt" class="category-prompt-box hidden">
+        <p id="category-prompt-text">New item! Select a category to save it:</p>
+        <div class="category-choice-grid">
+          <button type="button" class="btn-category-choice" data-cat="Produce">Produce</button>
+          <button type="button" class="btn-category-choice" data-cat="Grocery">Grocery</button>
+          <button type="button" class="btn-category-choice" data-cat="Frozen/Dairy">Dairy/Frozen</button>
+          <button type="button" class="btn-category-choice" data-cat="Supplies/Specialty">Supplies/Specialty</button>
+        </div>
+      </div>
+
+      <div class="queued-items-section">
+        <label class="queued-label">Items to Add</label>
+        <ul id="queued-other-items-list" class="queued-items-list"></ul>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary close-modal" data-close="other-items-modal">Cancel</button>
+        <button type="button" id="confirm-other-items-btn" class="btn-primary">Add Now</button>
+      </div>
     </div>
   </div>
 
