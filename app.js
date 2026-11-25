@@ -15,6 +15,8 @@ let state = {
 };
 
 let activeSlotTarget = { day: null, slot: null };
+let queuedOtherItems = [];
+let pendingNewOtherItem = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   registerServiceWorker();
@@ -150,6 +152,33 @@ function setupEventListeners() {
     window.print();
   });
 
+  document.getElementById("add-other-items-btn").addEventListener("click", openOtherItemsModal);
+  document.getElementById("other-item-name").addEventListener("input", handleOtherItemAutocomplete);
+  document.getElementById("other-item-name").addEventListener("focus", handleOtherItemAutocomplete);
+  document.getElementById("other-item-name").addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleQueueOtherItem();
+    }
+  });
+  document.getElementById("queue-other-item-btn").addEventListener("click", handleQueueOtherItem);
+  document.querySelectorAll(".btn-category-choice").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (!pendingNewOtherItem) return;
+      const category = btn.dataset.cat;
+      finalizeQueueOtherItem(
+        pendingNewOtherItem.name,
+        pendingNewOtherItem.quantity,
+        pendingNewOtherItem.unit,
+        category,
+        true
+      );
+      pendingNewOtherItem = null;
+      document.getElementById("new-item-category-prompt").classList.add("hidden");
+    });
+  });
+  document.getElementById("confirm-other-items-btn").addEventListener("click", confirmQueuedOtherItems);
+
   document.getElementById("new-meal-btn").addEventListener("click", () => openMealEditor());
   document.getElementById("add-ingredient-row-btn").addEventListener("click", () => addIngredientRow());
   document.getElementById("meal-form").addEventListener("submit", handleSaveMeal);
@@ -184,7 +213,11 @@ function setupEventListeners() {
   });
 
   document.addEventListener("click", e => {
-    if (!e.target.closest(".custom-add-wrapper") && !e.target.closest(".ing-name-wrapper")) {
+    if (
+      !e.target.closest(".custom-add-wrapper") &&
+      !e.target.closest(".ing-name-wrapper") &&
+      !e.target.closest(".other-name-wrapper")
+    ) {
       document.querySelectorAll(".autocomplete-dropdown").forEach(d => d.classList.remove("show"));
     }
   });
@@ -200,6 +233,7 @@ function getIngredientBank() {
     if (!bankMap.has(key)) {
       bankMap.set(key, {
         name,
+        quantity: Number(ing.Quantity) > 0 ? Number(ing.Quantity) : 1,
         unit: ing.Unit || "count",
         category: ing.Category || "Grocery"
       });
@@ -213,7 +247,8 @@ function getIngredientBank() {
     if (!bankMap.has(key)) {
       bankMap.set(key, {
         name,
-        unit: "count",
+        quantity: Number(hist.Quantity) > 0 ? Number(hist.Quantity) : 1,
+        unit: hist.Unit || "count",
         category: hist.Category || "Grocery"
       });
     }
@@ -233,8 +268,205 @@ function populateUnitSelects() {
   document.querySelectorAll(".custom-unit-select").forEach(select => {
     const current = select.value;
     select.innerHTML = state.units.map(u => `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join("");
-    if (current && state.units.includes(current)) select.value = current;
+    if (current && state.units.includes(current)) {
+      select.value = current;
+    } else if (state.units.includes("count")) {
+      select.value = "count";
+    }
   });
+}
+
+function openOtherItemsModal() {
+  queuedOtherItems = [];
+  pendingNewOtherItem = null;
+  document.getElementById("other-item-name").value = "";
+  document.getElementById("other-item-qty").value = "1";
+  const unitSelect = document.getElementById("other-item-unit");
+  unitSelect.value = state.units.includes("count") ? "count" : state.units[0];
+  document.getElementById("other-item-dropdown").classList.remove("show");
+  document.getElementById("new-item-category-prompt").classList.add("hidden");
+  renderQueuedOtherItems();
+  document.getElementById("other-items-modal").classList.remove("hidden");
+  document.getElementById("other-item-name").focus();
+}
+
+function handleOtherItemAutocomplete() {
+  const input = document.getElementById("other-item-name");
+  const dropdown = document.getElementById("other-item-dropdown");
+  const query = input.value.trim().toLowerCase();
+
+  document.getElementById("new-item-category-prompt").classList.add("hidden");
+  pendingNewOtherItem = null;
+
+  if (!query) {
+    dropdown.classList.remove("show");
+    return;
+  }
+
+  const bank = getIngredientBank();
+  const matches = bank.filter(item => item.name.toLowerCase().includes(query));
+
+  if (matches.length === 0) {
+    dropdown.classList.remove("show");
+    return;
+  }
+
+  dropdown.innerHTML = matches
+    .slice(0, 12)
+    .map(m => `
+      <div class="autocomplete-item" data-name="${escapeHtml(m.name)}" data-qty="${m.quantity}" data-unit="${escapeHtml(m.unit)}" data-cat="${escapeHtml(m.category)}">
+        <span>${escapeHtml(m.name)}</span>
+        <span class="autocomplete-meta">${formatNumber(m.quantity)} ${escapeHtml(m.unit)} · ${escapeHtml(m.category)}</span>
+      </div>
+    `)
+    .join("");
+
+  dropdown.querySelectorAll(".autocomplete-item").forEach(div => {
+    div.addEventListener("click", () => {
+      input.value = div.dataset.name;
+      const qtyInput = document.getElementById("other-item-qty");
+      const unitSelect = document.getElementById("other-item-unit");
+      qtyInput.value = formatNumber(parseFloat(div.dataset.qty) || 1);
+      if (div.dataset.unit && state.units.includes(div.dataset.unit)) {
+        unitSelect.value = div.dataset.unit;
+      } else if (state.units.includes("count")) {
+        unitSelect.value = "count";
+      }
+      dropdown.classList.remove("show");
+      input.focus();
+    });
+  });
+
+  dropdown.classList.add("show");
+}
+
+function handleQueueOtherItem() {
+  const nameInput = document.getElementById("other-item-name");
+  const qtyInput = document.getElementById("other-item-qty");
+  const unitSelect = document.getElementById("other-item-unit");
+  const dropdown = document.getElementById("other-item-dropdown");
+
+  const cleanName = nameInput.value.trim();
+  if (!cleanName) return;
+
+  dropdown.classList.remove("show");
+
+  const parsedQty = parseFloat(qtyInput.value);
+  const validQty = parsedQty > 0 ? formatNumber(parsedQty) : 1;
+  const unit = unitSelect.value || "count";
+
+  const bank = getIngredientBank();
+  const savedMatch = bank.find(b => b.name.toLowerCase() === cleanName.toLowerCase());
+
+  if (savedMatch) {
+    finalizeQueueOtherItem(savedMatch.name, validQty, unit, savedMatch.category, false);
+    return;
+  }
+
+  const queuedMatch = queuedOtherItems.find(q => q.name.toLowerCase() === cleanName.toLowerCase());
+  if (queuedMatch) {
+    finalizeQueueOtherItem(queuedMatch.name, validQty, unit, queuedMatch.category, false);
+    return;
+  }
+
+  pendingNewOtherItem = { name: cleanName, quantity: validQty, unit };
+  document.getElementById("category-prompt-text").textContent = `"${cleanName}" is new. Choose a category to save it:`;
+  document.getElementById("new-item-category-prompt").classList.remove("hidden");
+}
+
+function finalizeQueueOtherItem(name, quantity, unit, category, isNewToMemory) {
+  if (isNewToMemory) {
+    if (!state.customHistory.some(h => h.Item_Name.toLowerCase() === name.toLowerCase())) {
+      state.customHistory.push({
+        Item_Name: name,
+        Quantity: quantity,
+        Unit: unit,
+        Category: category,
+        Last_Used: new Date().toISOString()
+      });
+      saveLocalCache();
+      postToServer({ action: "addCustomHistory", itemName: name, category, quantity, unit });
+    }
+  }
+
+  const existing = queuedOtherItems.find(
+    item => item.name.toLowerCase() === name.toLowerCase() && item.unit.toLowerCase() === unit.toLowerCase() && item.category === category
+  );
+
+  if (existing) {
+    existing.quantity = formatNumber(existing.quantity + quantity);
+  } else {
+    queuedOtherItems.push({ name, quantity, unit, category });
+  }
+
+  const nameInput = document.getElementById("other-item-name");
+  const qtyInput = document.getElementById("other-item-qty");
+  const unitSelect = document.getElementById("other-item-unit");
+  nameInput.value = "";
+  qtyInput.value = "1";
+  unitSelect.value = state.units.includes("count") ? "count" : state.units[0];
+  renderQueuedOtherItems();
+  nameInput.focus();
+}
+
+function renderQueuedOtherItems() {
+  const list = document.getElementById("queued-other-items-list");
+  if (queuedOtherItems.length === 0) {
+    list.innerHTML = `<li class="queued-empty">No items added yet.</li>`;
+    return;
+  }
+
+  list.innerHTML = queuedOtherItems
+    .map((item, idx) => {
+      const unitStr = item.unit && item.unit !== "count" ? ` ${escapeHtml(item.unit)}` : "";
+      return `
+        <li class="queued-item-row">
+          <div class="queued-item-info">
+            <strong>${formatNumber(item.quantity)}${unitStr}</strong> ${escapeHtml(item.name)}
+            <span class="queued-item-cat">(${escapeHtml(item.category)})</span>
+          </div>
+          <button type="button" class="del-item-btn" data-index="${idx}">&times;</button>
+        </li>
+      `;
+    })
+    .join("");
+
+  list.querySelectorAll(".del-item-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.dataset.index, 10);
+      queuedOtherItems.splice(idx, 1);
+      renderQueuedOtherItems();
+    });
+  });
+}
+
+function confirmQueuedOtherItems() {
+  if (queuedOtherItems.length === 0) {
+    document.getElementById("other-items-modal").classList.add("hidden");
+    return;
+  }
+
+  queuedOtherItems.forEach(item => {
+    const key = `custom|${item.category}|${item.name.toLowerCase()}|${item.unit.toLowerCase()}`;
+    const existing = state.shoppingState.customItems.find(c => c.key === key);
+    if (existing) {
+      existing.quantity = formatNumber(existing.quantity + item.quantity);
+    } else {
+      state.shoppingState.customItems.push({
+        key,
+        name: item.name,
+        quantity: item.quantity,
+        unit: item.unit,
+        category: item.category
+      });
+    }
+  });
+
+  queuedOtherItems = [];
+  pendingNewOtherItem = null;
+  document.getElementById("other-items-modal").classList.add("hidden");
+  renderShoppingList();
+  postToServer({ action: "saveShoppingState", state: state.shoppingState });
 }
 
 function renderWeeklyPlan() {
