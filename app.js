@@ -22,6 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
   registerServiceWorker();
   loadCachedState();
   setupNavigation();
+  setupViewportAdjustment();
   setupEventListeners();
   renderAll();
   syncFromServer();
@@ -121,6 +122,22 @@ function setupNavigation() {
       document.querySelectorAll(".view-section").forEach(sec => sec.classList.toggle("active", sec.id === `view-${target}`));
     });
   });
+}
+
+function setupViewportAdjustment() {
+  if (!window.visualViewport) return;
+
+  const updateModalViewport = () => {
+    const vv = window.visualViewport;
+    document.querySelectorAll(".modal").forEach(modal => {
+      modal.style.height = `${vv.height}px`;
+      modal.style.top = `${vv.offsetTop}px`;
+    });
+  };
+
+  window.visualViewport.addEventListener("resize", updateModalViewport);
+  window.visualViewport.addEventListener("scroll", updateModalViewport);
+  updateModalViewport();
 }
 
 function setupEventListeners() {
